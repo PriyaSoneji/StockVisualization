@@ -1,10 +1,11 @@
 from pandas import DataFrame
+from pandas_datareader import data as pdr
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tkinter import *
 from datetime import date
 import datetime
-import pandas as pd
+import yfinance as yf
 from time import sleep
 import time
 import threading
@@ -20,7 +21,7 @@ root = Tk()
 e1 = Entry(root).grid(row=0, column=1, sticky='WENS')
 e2 = Entry(root).grid(row=0, column=1, sticky='WENS')
 
-symbol1 = "MSFT"
+symbol1 = "VBIV"
 symbol2 = "ALPN"
 symbol3 = "AAPL"
 time1 = []
