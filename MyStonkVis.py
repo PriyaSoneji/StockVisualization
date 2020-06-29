@@ -17,7 +17,7 @@ root = Tk()
 
 r.authentication.login(username=os.environ.get('RobinUSR'), password=os.environ.get('RobinPWD'))
 
-symbol1 = "COTY"
+symbol1 = "KSS"
 symbol2 = "ALPN"
 symbol3 = "AAPL"
 time1 = []
@@ -29,22 +29,30 @@ price3 = []
 
 dataup = []
 datadown = []
+pctup = []
+pctdown = []
 currPrice1 = StringVar()
 currPrice2 = StringVar()
 gainers = StringVar(value=dataup)
 losers = StringVar(value=datadown)
+gainups = StringVar(value=pctup)
+gaindowns = StringVar(value=pctdown)
 
 # labels for stock data
-Label(root, textvariable=currPrice1, font=("Helvetica", 16)).grid(row=0, column=2, sticky='WENS')
-Label(root, text=r.stocks.get_name_by_symbol(symbol1), font=("Helvetica", 16)).grid(row=0, column=1, sticky='WENS')
-Label(root, textvariable=currPrice2, font=("Helvetica", 16)).grid(row=2, column=2, sticky='WENS')
-Label(root, text=r.stocks.get_name_by_symbol(symbol2), font=("Helvetica", 16)).grid(row=2, column=1, sticky='WENS')
+Label(root, textvariable=currPrice1, font=("Times", 16)).grid(row=0, column=2, sticky='WENS')
+Label(root, text=r.stocks.get_name_by_symbol(symbol1), font=("Times", 16)).grid(row=0, column=1, sticky='WENS')
+Label(root, textvariable=currPrice2, font=("Times", 16)).grid(row=2, column=2, sticky='WENS')
+Label(root, text=r.stocks.get_name_by_symbol(symbol2), font=("Times", 16)).grid(row=2, column=1, sticky='WENS')
 
 # labels for gainers and losers
-Label(root, text="The Day's Top Gainers", font=("Helvetica", 16)).grid(row=0, column=3, sticky='WENS')
-Label(root, text="The Day's Top Losers", font=("Helvetica", 16)).grid(row=2, column=3, sticky='WENS')
-Listbox(root, listvariable=gainers).grid(row=1, column=3, sticky='WENS')
-Listbox(root, listvariable=losers).grid(row=3, column=3, sticky='WENS')
+Label(root, text="Top Gainers", font=("Times", 16), fg="green").grid(row=0, column=3, sticky='WENS')
+Label(root, text="Top Losers", font=("Times", 16), fg="red").grid(row=2, column=3, sticky='WENS')
+Listbox(root, listvariable=gainers, font=("Times", 16), fg="green").grid(row=1, column=3, sticky='WENS')
+Listbox(root, listvariable=losers, font=("Times", 16), fg="red").grid(row=3, column=3, sticky='WENS')
+Label(root, text="% Up", font=("Times", 16), fg="green").grid(row=0, column=4, sticky='WENS')
+Label(root, text="% Down", font=("Times", 16), fg="red").grid(row=2, column=4, sticky='WENS')
+Listbox(root, listvariable=gainups, font=("Times", 16), fg="green").grid(row=1, column=4, sticky='WENS')
+Listbox(root, listvariable=gaindowns, font=("Times", 16), fg="red").grid(row=3, column=4, sticky='WENS')
 
 current_time = 0
 
@@ -168,17 +176,28 @@ def getCurrPrice(symbol, timearr, pricearr):
 
 
 def getDayMovers():
-    global gainers, losers, dataup, datadown
-    dataupp = pd.DataFrame(r.markets.get_top_movers("up"))['price_movement']
+    global gainers, losers, dataup, datadown, pctup, pctdown, gainups, gaindowns
+    dataupp = pd.DataFrame(r.markets.get_top_movers("up"))
+    datadownn = pd.DataFrame(r.markets.get_top_movers("down"))
+
+    dataupp['pct'] = dataupp['price_movement'].apply(lambda x: x['market_hours_last_movement_pct'])
+    datadownn['pct'] = datadownn['price_movement'].apply(lambda x: x['market_hours_last_movement_pct'])
+
+    pctup = dataupp['pct']
+    pctdown = datadownn['pct']
+
     dataupp.index = pd.DataFrame(r.markets.get_top_movers("up"))['symbol']
-    dataupp.to_numpy()
-    datadownn = pd.DataFrame(r.markets.get_top_movers("down"))['price_movement']
     datadownn.index = pd.DataFrame(r.markets.get_top_movers("down"))['symbol']
+
     datadownn.to_numpy()
+    dataupp.to_numpy()
     datadown = datadownn.index
     dataup = dataupp.index
-    gainers.set(dataup)
-    losers.set(datadown)
+
+    gainers.set('\n'.join(dataup))
+    losers.set('\n'.join(datadown))
+    gainups.set('\n'.join(pctup))
+    gaindowns.set('\n'.join(pctdown))
 
 
 # stonk one - current price
@@ -188,12 +207,13 @@ def plotgraph1():
     df1 = DataFrame({'Price': price1,
                      'Time': time1})
     df1.plot(kind='line', legend=False, ax=ax1, grid=True, x='Time', y='Price', title="Current Trend")
+    figure1.autofmt_xdate()
     canvas1.draw_idle()
 
 
 # stonk one - one month price graph
 def plotgraph2():
-    global df2, figure2, ax2, root, symbol1, figure2
+    global df2, figure2, ax2, root, symbol1
     mondat = pd.DataFrame(r.stocks.get_stock_historicals(symbol1, interval="day", span="month"))['begins_at']
     mondat.index = pd.to_datetime(mondat)
     index = pd.DatetimeIndex(mondat.index)
@@ -215,13 +235,14 @@ def plotgraph3():
     df3 = DataFrame({'Price': price2,
                      'Time': time2})
     df3.plot(kind='line', legend=False, ax=ax3, grid=True, x='Time', y='Price', title="Current Trend")
+    figure3.autofmt_xdate()
     canvas3.draw_idle()
 
 
 # stonk two - one month price graph
 def plotgraph4():
     # grab a reference to the image panels
-    global df4, figure4, ax4, root, symbol2, figure4
+    global df4, figure4, ax4, root, symbol2
     # data for the plot
     mondat = pd.DataFrame(r.stocks.get_stock_historicals(symbol2, interval="day", span="month"))['begins_at']
     mondat.index = pd.to_datetime(mondat)
