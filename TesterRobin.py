@@ -1,8 +1,5 @@
-from datetime import date
-import datetime
 import pandas as pd
 import robin_stocks as r
-import pytz
 import matplotlib.pyplot as plt
 import os
 
@@ -19,7 +16,7 @@ df1 = index.tz_convert('US/Eastern').strftime("%H:%M:%S")
 price = pd.DataFrame(r.stocks.get_stock_historicals(symbol, interval="5minute", span="day"))['close_price'].astype(float).tolist()
 # print(df1)
 # print(price)
-# print(round(float(r.stocks.get_latest_price(symbol)[0]), 2))
+print(round(float(r.stocks.get_latest_price(symbol)[0]), 2))
 
 plt.figure(figsize=(10,10))
 plt.plot(df1, price)

@@ -1,18 +1,15 @@
 from pandas import DataFrame
-from pandas_datareader import data as pdr
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tkinter import *
 from datetime import date
 import datetime
-import yfinance as yf
 from time import sleep
 import time
 import threading
 from yahoo_fin import stock_info as si
 from yahoo_fin.stock_info import *
 import mplcursors
-import numpy as np
 from win32api import GetSystemMetrics
 
 plt.style.use('seaborn-darkgrid')

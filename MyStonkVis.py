@@ -1,27 +1,23 @@
 from pandas import DataFrame
-from pandas_datareader import data as pdr
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tkinter import *
-from datetime import date
 import datetime
-from dateutil import tz
+import matplotlib.cbook as cbook
+import matplotlib.dates as mdates
 import os
-import pandas as pd
 import robin_stocks as r
 from time import sleep
 import time
 import threading
 import mplcursors
-import numpy as np
+from yahoo_fin import stock_info as si
+from yahoo_fin.stock_info import *
 
 plt.style.use('seaborn-darkgrid')
 root = Tk()
 
 r.authentication.login(username=os.environ.get('RobinUSR'), password=os.environ.get('RobinPWD'), store_session=True)
-
-e1 = Entry(root).grid(row=0, column=1, sticky='WENS')
-e2 = Entry(root).grid(row=0, column=1, sticky='WENS')
 
 symbol1 = "MSFT"
 symbol2 = "ALPN"
@@ -174,17 +170,17 @@ def plotgraph1():
 # stonk one - one month price graph
 def plotgraph2():
     # grab a reference to the image panels
-    global df2, figure2, ax2, root, symbol1
-
+    global df2, figure2, ax2, root, symbol1, figure2
     mondat = pd.DataFrame(r.stocks.get_stock_historicals(symbol1, interval="day", span="month"))['begins_at']
     mondat.index = pd.to_datetime(mondat)
     index = pd.DatetimeIndex(mondat.index)
-    mondat = index.tz_convert('US/Eastern').strftime("%d/%m/%Y")
+    mondat = index.tz_convert('US/Eastern').strftime("%m/%d")
     # data for the plot
     df2 = DataFrame({'Time': mondat,
                      'Price': pd.DataFrame(r.stocks.get_stock_historicals(symbol1, interval="day", span="month"))[
                          'close_price'].astype(float)})
     df2.plot(kind='line', legend=False, ax=ax2, grid=True, x='Time', y='Price', title="One Month Trend")
+    figure2.autofmt_xdate()
     canvas2.draw_idle()
 
 
@@ -202,24 +198,24 @@ def plotgraph3():
 # stonk two - one month price graph
 def plotgraph4():
     # grab a reference to the image panels
-    global df4, figure4, ax4, root, symbol2
+    global df4, figure4, ax4, root, symbol2, figure4
     # data for the plot
     mondat = pd.DataFrame(r.stocks.get_stock_historicals(symbol2, interval="day", span="month"))['begins_at']
     mondat.index = pd.to_datetime(mondat)
     index = pd.DatetimeIndex(mondat.index)
-    mondat = index.tz_convert('US/Eastern').strftime("%d/%m/%Y")
+    mondat = index.tz_convert('US/Eastern').strftime("%m/%d")
     # data for the plot
     df4 = DataFrame({'Time': mondat,
                      'Price': pd.DataFrame(r.stocks.get_stock_historicals(symbol2, interval="day", span="month"))[
                          'close_price'].astype(float)})
     df4.plot(kind='line', legend=False, ax=ax4, grid=True, x='Time', y='Price', title="One Month Trend")
+    figure4.autofmt_xdate()
     canvas4.draw_idle()
 
 
 plt.ion()
 
 root.wm_title("StonksTracker")
-# root.geometry(str(GetSystemMetrics(0)) + "x" + str(GetSystemMetrics(1)))
 
 startup()
 thread = threading.Thread(target=stonkLoop, args=())
