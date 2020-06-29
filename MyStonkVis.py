@@ -11,13 +11,12 @@ from time import sleep
 import time
 import threading
 import mplcursors
-from yahoo_fin import stock_info as si
-from yahoo_fin.stock_info import *
+import pandas as pd
 
 plt.style.use('seaborn-darkgrid')
 root = Tk()
 
-r.authentication.login(username=os.environ.get('RobinUSR'), password=os.environ.get('RobinPWD'), store_session=True)
+r.authentication.login(username=os.environ.get('RobinUSR'), password=os.environ.get('RobinPWD'))
 
 symbol1 = "MSFT"
 symbol2 = "ALPN"
@@ -29,12 +28,24 @@ price2 = []
 time3 = []
 price3 = []
 
+dataup = []
+datadown = []
 currPrice1 = StringVar()
 currPrice2 = StringVar()
+gainers = StringVar(value=dataup)
+losers = StringVar(value=datadown)
+
+# labels for stock data
 Label(root, textvariable=currPrice1, font=("Helvetica", 16)).grid(row=0, column=2, sticky='WENS')
 Label(root, text=r.stocks.get_name_by_symbol(symbol1), font=("Helvetica", 16)).grid(row=0, column=1, sticky='WENS')
 Label(root, textvariable=currPrice2, font=("Helvetica", 16)).grid(row=2, column=2, sticky='WENS')
 Label(root, text=r.stocks.get_name_by_symbol(symbol2), font=("Helvetica", 16)).grid(row=2, column=1, sticky='WENS')
+
+# labels for gainers and losers
+Label(root, text="The Day's Top Gainers", font=("Helvetica", 16)).grid(row=0, column=3, sticky='WENS')
+Label(root, text="The Day's Top Losers", font=("Helvetica", 16)).grid(row=2, column=3, sticky='WENS')
+Listbox(root, listvariable=gainers).grid(row=1, column=3, sticky='WENS')
+Listbox(root, listvariable=losers).grid(row=3, column=3, sticky='WENS')
 
 current_time = 0
 
@@ -75,14 +86,13 @@ stopEvent = threading.Event()
 def resetDaily():
     global time1, time2, time3, price1, price2, price3, figure1
     figure1.clf()
+    figure3.clf()
     time1 = []
     time2 = []
     time3 = []
     price1 = []
     price2 = []
     price3 = []
-    plotgraph2()
-    plotgraph4()
 
 
 def startup():
@@ -107,6 +117,7 @@ def startup():
 
     plotgraph2()
     plotgraph4()
+    getDayMovers()
 
 
 def updateDailies():
@@ -114,15 +125,15 @@ def updateDailies():
     getCurrPrice(symbol1, time1, price1)
     getCurrPrice(symbol2, time2, price2)
     getCurrPrice(symbol3, time3, price3)
-    currPrice1.set("Current Price: $" + str(price1[-1]))
-    currPrice2.set("Current Price: $" + str(price2[-1]))
+    currPrice1.set("Current Price: $" + (str(round(float(r.stocks.get_latest_price(symbol1)[0]), 2))))
+    currPrice2.set("Current Price: $" + (str(round(float(r.stocks.get_latest_price(symbol2)[0]), 2))))
     plotgraph1()
     plotgraph3()
 
 
 def stonkLoop():
     try:
-        start = '09:30:10'
+        start = '09:30:00'
         end = '16:00:00'
         refreshStart = '09:29:00'
         refreshEnd = '09:29:30'
@@ -153,7 +164,21 @@ def getCurrPrice(symbol, timearr, pricearr):
     global current_time
     pricearr.append(round(float(r.stocks.get_latest_price(symbol)[0]), 2))
     current_time = datetime.datetime.now().strftime("%H:%M:%S")
-    timearr.append(current_time)
+    timearr.index.append(current_time)
+
+
+def getDayMovers():
+    global gainers, losers, dataup, datadown
+    dataupp = pd.DataFrame(r.markets.get_top_movers("up"))['price_movement']
+    dataupp.index = pd.DataFrame(r.markets.get_top_movers("up"))['symbol']
+    dataupp.to_numpy()
+    datadownn = pd.DataFrame(r.markets.get_top_movers("down"))['price_movement']
+    datadownn.index = pd.DataFrame(r.markets.get_top_movers("down"))['symbol']
+    datadownn.to_numpy()
+    datadown = datadownn.index
+    dataup = dataupp.index
+    gainers.set(dataup)
+    losers.set(datadown)
 
 
 # stonk one - current price
