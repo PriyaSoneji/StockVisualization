@@ -24,8 +24,6 @@ time1 = []
 price1 = []
 time2 = []
 price2 = []
-time3 = []
-price3 = []
 
 dataup = []
 datadown = []
@@ -96,10 +94,8 @@ def resetDaily():
     figure3.clf()
     time1 = []
     time2 = []
-    time3 = []
     price1 = []
     price2 = []
-    price3 = []
 
 
 def startup():
@@ -133,7 +129,6 @@ def updateDailies():
     currPrice2.set("Current Price: $" + (str(round(float(r.stocks.get_latest_price(symbol2)[0]), 2))))
     time1 = getCurrPrice(symbol1, time1, price1)
     time2 = getCurrPrice(symbol2, time2, price2)
-    time3 = getCurrPrice(symbol3, time3, price3)
     plotgraph1()
     plotgraph3()
 

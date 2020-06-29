@@ -18,17 +18,17 @@ current_time = datetime.datetime.now().strftime("%H:%M:%S")
 df1 = df1.to_numpy()
 arr1 = [current_time]
 time = np.append(df1, arr1)
-print(len(time))
+# print(len(time))
 
 price = pd.DataFrame(r.stocks.get_stock_historicals(symbol, interval="5minute", span="day"))['close_price'].astype(
     float).tolist()
 price.append(round(float(r.stocks.get_latest_price(symbol)[0]), 2))
-print(len(price))
+# print(len(price))
 
 data = DataFrame({'Price': price,
                   'Time': time})
 
-print(data)
+# print(data)
 
 plt.figure(figsize=(5, 5))
 plt.plot(time, price)
