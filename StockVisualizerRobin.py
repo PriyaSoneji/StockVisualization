@@ -1,3 +1,4 @@
+# import packages
 from pandas import DataFrame
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -12,19 +13,22 @@ import mplcursors
 import pandas as pd
 import numpy as np
 
+# define the plot style and initialize the tkinter GUI
 plt.style.use('seaborn-darkgrid')
 root = Tk()
 
+# login to RobinHood using environment variables
 r.authentication.login(username=os.environ.get('RobinUSR'), password=os.environ.get('RobinPWD'))
 
+# define the tickers and arrays to hold the data
 symbol1 = "KSS"
 symbol2 = "NBL"
-symbol3 = "AAPL"
 time1 = []
 price1 = []
 time2 = []
 price2 = []
 
+# define the arrays and string variables for the top movers
 dataup = []
 datadown = []
 pctup = []
@@ -52,6 +56,7 @@ Label(root, text="% Down", font=("Times", 16), fg="red").grid(row=2, column=4, s
 Listbox(root, listvariable=gainups, font=("Times", 16), fg="green").grid(row=1, column=4, sticky='WENS')
 Listbox(root, listvariable=gaindowns, font=("Times", 16), fg="red").grid(row=3, column=4, sticky='WENS')
 
+# initialize the current time
 current_time = 0
 
 # figure one data
@@ -84,10 +89,11 @@ canvas4 = FigureCanvasTkAgg(figure4, root)
 mplcursors.cursor(hover=True)
 canvas4.get_tk_widget().grid(row=3, column=2, sticky='WENS')
 
-# stop event
+# stop event for threading
 stopEvent = threading.Event()
 
 
+# resets the plots
 def resetDaily():
     global time1, time2, time3, price1, price2, price3, figure1
     figure1.clf()
@@ -98,14 +104,20 @@ def resetDaily():
     price2 = []
 
 
+# defines what to do on startup to initialize everything
 def startup():
     global time1, time2, price1, price2, symbol1, symbol2
+
+    # set up the times
     refreshStart = '09:30:00'
     refreshEnd = '20:00:00'
     t = time.localtime()
     d = datetime.datetime.now()
     currtime = time.strftime("%H:%M:%S", t)
+
+    # check if the stock market is open
     if (refreshStart < currtime < refreshEnd) and (d.isoweekday() in range(1, 6)):
+        # get the data from today up till the current time
         time1 = getDayUpNow(symbol1)
         time2 = getDayUpNow(symbol2)
         price1 = pd.DataFrame(r.stocks.get_stock_historicals(symbol1, interval="5minute", span="day"))[
@@ -113,63 +125,89 @@ def startup():
         price2 = pd.DataFrame(r.stocks.get_stock_historicals(symbol2, interval="5minute", span="day"))[
             'close_price'].astype(float).tolist()
 
+        # change the time arrays to a numpy array to accomodate new data being appended
         time1 = time1.to_numpy()
         time2 = time2.to_numpy()
+
+        # plot the graphs
         plotgraph1()
         plotgraph3()
 
+    # plot the historical graphs and set up the top movers lists
     plotgraph2()
     plotgraph4()
     getDayMovers()
 
 
+# updates the daily graphs and label
 def updateDailies():
-    global time1, time2, time3, price1, price2, price3, figure1, symbol1, symbol2, symbol3, current_time
+    global time1, time2, price1, price2, figure1, symbol1, symbol2, current_time
+
+    # set the current price label to the current price
     currPrice1.set("Current Price: $" + (str(round(float(r.stocks.get_latest_price(symbol1)[0]), 2))))
     currPrice2.set("Current Price: $" + (str(round(float(r.stocks.get_latest_price(symbol2)[0]), 2))))
+
+    # add the new data points to the arrays
     time1 = getCurrPrice(symbol1, time1, price1)
     time2 = getCurrPrice(symbol2, time2, price2)
+
+    # plot the graphs
     plotgraph1()
     plotgraph3()
 
 
+# main loop to handle updating the graph once program starts
 def stonkLoop():
     try:
+        # define the timings
         start = '09:30:00'
         end = '16:00:00'
         refreshStart = '09:29:00'
         refreshEnd = '09:29:30'
+
+        # confirm threading stopEvent
         while not stopEvent.is_set():
+            # get current time and date
             t = time.localtime()
             d = datetime.datetime.now()
             currtime = time.strftime("%H:%M:%S", t)
+
+            # check if stock market is open
             if (start < currtime < end) and (d.isoweekday() in range(1, 6)):
                 updateDailies()
 
+            # check if its the refresh time
             if refreshStart < currtime < refreshEnd:
                 resetDaily()
 
+            # amount between graph and price updates - in seconds
             sleep(30)
 
     except RuntimeError:
         print("[INFO] caught a RuntimeError")
 
 
+# gets the time data from today
 def getDayUpNow(symbol):
+    # gets the daily data with 5 minute interval from RobinHood and converts it into proper format
     data = pd.DataFrame(r.stocks.get_stock_historicals(symbol, interval="5minute", span="day"))['begins_at']
     data['begins_at'] = pd.to_datetime(data)
     data = pd.DatetimeIndex(data['begins_at'])
     return data.tz_convert('US/Eastern').strftime("%H:%M:%S")
 
 
+# gets the current price and time
 def getCurrPrice(symbol, timearr, pricearr):
     global current_time
+    # appends the current price to the price array
     pricearr.append(round(float(r.stocks.get_latest_price(symbol)[0]), 2))
+    # gets the current time in hour:minute:second format
     current_time = datetime.datetime.now().strftime("%H:%M:%S")
     arr1 = [current_time]
     return np.append(timearr, arr1)
 
 
+# get the daily movers
 def getDayMovers():
     global gainers, losers, dataup, datadown, pctup, pctdown, gainups, gaindowns
     dataupp = pd.DataFrame(r.markets.get_top_movers("up"))
@@ -189,6 +227,7 @@ def getDayMovers():
     datadown = datadownn.index
     dataup = dataupp.index
 
+    # sets the list box data
     gainers.set('\n'.join(dataup))
     losers.set('\n'.join(datadown))
     gainups.set('\n'.join(pctup))
@@ -224,7 +263,6 @@ def plotgraph2():
 
 # stonk two - current price
 def plotgraph3():
-    # grab a reference to the image panels
     global df3, figure3, ax3, root, price2, time2
     # data for the plot
     df3 = DataFrame({'Price': price2,
@@ -236,7 +274,6 @@ def plotgraph3():
 
 # stonk two - one month price graph
 def plotgraph4():
-    # grab a reference to the image panels
     global df4, figure4, ax4, root, symbol2
     # data for the plot
     mondat = pd.DataFrame(r.stocks.get_stock_historicals(symbol2, interval="day", span="month"))['begins_at']
@@ -252,11 +289,17 @@ def plotgraph4():
     canvas4.draw_idle()
 
 
+# turn on interactive mode for plots
 plt.ion()
 
+# set GUI title
 root.wm_title("StonksTracker")
 
 startup()
+
+# start the threading
 thread = threading.Thread(target=stonkLoop, args=())
 thread.start()
+
+# start GUI mainloop
 root.mainloop()
