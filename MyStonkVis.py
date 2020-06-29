@@ -3,8 +3,6 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tkinter import *
 import datetime
-import matplotlib.cbook as cbook
-import matplotlib.dates as mdates
 import os
 import robin_stocks as r
 from time import sleep
@@ -12,13 +10,14 @@ import time
 import threading
 import mplcursors
 import pandas as pd
+import numpy as np
 
 plt.style.use('seaborn-darkgrid')
 root = Tk()
 
 r.authentication.login(username=os.environ.get('RobinUSR'), password=os.environ.get('RobinPWD'))
 
-symbol1 = "MSFT"
+symbol1 = "COTY"
 symbol2 = "ALPN"
 symbol3 = "AAPL"
 time1 = []
@@ -105,13 +104,13 @@ def startup():
     if (refreshStart < currtime < refreshEnd) and (d.isoweekday() in range(1, 6)):
         time1 = getDayUpNow(symbol1)
         time2 = getDayUpNow(symbol2)
-        price1 = list(
-            pd.DataFrame(r.stocks.get_stock_historicals(symbol1, interval="5minute", span="day"))['close_price'].astype(
-                float).tolist())
-        price2 = list(
-            pd.DataFrame(r.stocks.get_stock_historicals(symbol2, interval="5minute", span="day"))['close_price'].astype(
-                float).tolist())
+        price1 = pd.DataFrame(r.stocks.get_stock_historicals(symbol1, interval="5minute", span="day"))[
+            'close_price'].astype(float).tolist()
+        price2 = pd.DataFrame(r.stocks.get_stock_historicals(symbol2, interval="5minute", span="day"))[
+            'close_price'].astype(float).tolist()
 
+        time1 = time1.to_numpy()
+        time2 = time2.to_numpy()
         plotgraph1()
         plotgraph3()
 
@@ -121,12 +120,12 @@ def startup():
 
 
 def updateDailies():
-    global time1, time2, time3, price1, price2, price3, figure1, symbol1, symbol2, symbol3
-    getCurrPrice(symbol1, time1, price1)
-    getCurrPrice(symbol2, time2, price2)
-    getCurrPrice(symbol3, time3, price3)
+    global time1, time2, time3, price1, price2, price3, figure1, symbol1, symbol2, symbol3, current_time
     currPrice1.set("Current Price: $" + (str(round(float(r.stocks.get_latest_price(symbol1)[0]), 2))))
     currPrice2.set("Current Price: $" + (str(round(float(r.stocks.get_latest_price(symbol2)[0]), 2))))
+    time1 = getCurrPrice(symbol1, time1, price1)
+    time2 = getCurrPrice(symbol2, time2, price2)
+    time3 = getCurrPrice(symbol3, time3, price3)
     plotgraph1()
     plotgraph3()
 
@@ -147,24 +146,25 @@ def stonkLoop():
             if refreshStart < currtime < refreshEnd:
                 resetDaily()
 
-            sleep(10)
+            sleep(30)
 
     except RuntimeError:
         print("[INFO] caught a RuntimeError")
 
 
 def getDayUpNow(symbol):
-    update = pd.DataFrame(r.stocks.get_stock_historicals(symbol, interval="5minute", span="day"))['begins_at']
-    update.index = pd.to_datetime(update)
-    index = pd.DatetimeIndex(update.index)
-    return index.tz_convert('US/Eastern').strftime("%H:%M:%S")
+    data = pd.DataFrame(r.stocks.get_stock_historicals(symbol, interval="5minute", span="day"))['begins_at']
+    data['begins_at'] = pd.to_datetime(data)
+    data = pd.DatetimeIndex(data['begins_at'])
+    return data.tz_convert('US/Eastern').strftime("%H:%M:%S")
 
 
 def getCurrPrice(symbol, timearr, pricearr):
     global current_time
     pricearr.append(round(float(r.stocks.get_latest_price(symbol)[0]), 2))
     current_time = datetime.datetime.now().strftime("%H:%M:%S")
-    timearr.index.append(current_time)
+    arr1 = [current_time]
+    return np.append(timearr, arr1)
 
 
 def getDayMovers():
@@ -183,18 +183,16 @@ def getDayMovers():
 
 # stonk one - current price
 def plotgraph1():
-    # grab a reference to the image panels
     global df1, figure1, ax1, root, price1, time1
     # data for the plot
     df1 = DataFrame({'Price': price1,
                      'Time': time1})
-    df1.plot(kind='line', legend=False, ax=ax1, grid=True, x='Time', y='Price', title="Stonks One")
+    df1.plot(kind='line', legend=False, ax=ax1, grid=True, x='Time', y='Price', title="Current Trend")
     canvas1.draw_idle()
 
 
 # stonk one - one month price graph
 def plotgraph2():
-    # grab a reference to the image panels
     global df2, figure2, ax2, root, symbol1, figure2
     mondat = pd.DataFrame(r.stocks.get_stock_historicals(symbol1, interval="day", span="month"))['begins_at']
     mondat.index = pd.to_datetime(mondat)
@@ -216,7 +214,7 @@ def plotgraph3():
     # data for the plot
     df3 = DataFrame({'Price': price2,
                      'Time': time2})
-    df3.plot(kind='line', legend=False, ax=ax3, grid=True, x='Time', y='Price', title="Stonks Two")
+    df3.plot(kind='line', legend=False, ax=ax3, grid=True, x='Time', y='Price', title="Current Trend")
     canvas3.draw_idle()
 
 
