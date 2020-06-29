@@ -18,7 +18,7 @@ root = Tk()
 r.authentication.login(username=os.environ.get('RobinUSR'), password=os.environ.get('RobinPWD'))
 
 symbol1 = "KSS"
-symbol2 = "ALPN"
+symbol2 = "NBL"
 symbol3 = "AAPL"
 time1 = []
 price1 = []
