@@ -1,15 +1,15 @@
 # Stock Visualizer Code
 ## Description of the Programs
 ### StockVisualizerRobin
-Requires a RobinHood Account
+Requires a RobinHood Account.
 Plots live data and historical data. Displays daily movers and current price as well.
 ### TesterRobin
-Requires a RobinHood Account
-Used to test certain functionality of StockVisualizerRobin
+Requires a RobinHood Account.
+Used to test certain functionality of StockVisualizerRobin.
 ### StockVisualizerY
-Still in Progress. Uses the yfinance package
+Still in Progress. Uses the yfinance package.
 ### Tester
-Used to test certain functionality of StonkVisualizer
+Used to test certain functionality of StonkVisualizer.
 
 ## Setup
 * pip install -r requirements.txt
