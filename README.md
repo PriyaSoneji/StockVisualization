@@ -1,16 +1,15 @@
-# Stonks Tracker
+# Stock Visualizer Code
 ## Description of the Programs
-### MyStonkVis
+### StockVisualizerRobin
 Requires a RobinHood Account
-Has the most functionality
+Plots live data and historical data. Displays daily movers and current price as well.
 ### TesterRobin
 Requires a RobinHood Account
-Used to test certain functionality of MyStonkVis
-### StonkVisualizer
-Works on Dell/Windows only. Can comment out certain pieces to work on any OS.
-Basic stock monitoring only.
+Used to test certain functionality of StockVisualizerRobin
+### StockVisualizerY
+Still in Progress. Uses the yfinance package
 ### Tester
-Used to test hover feature and parts of StonkVisualizer
+Used to test certain functionality of StonkVisualizer
 
 ## Setup
 * pip install -r requirements.txt
