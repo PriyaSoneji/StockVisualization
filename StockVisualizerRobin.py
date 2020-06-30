@@ -110,7 +110,7 @@ def startup():
 
     # set up the times
     refreshStart = '09:30:00'
-    refreshEnd = '20:00:00'
+    refreshEnd = '22:00:00'
     t = time.localtime()
     d = datetime.datetime.now()
     currtime = time.strftime("%H:%M:%S", t)
@@ -174,6 +174,7 @@ def stonkLoop():
 
             # check if stock market is open
             if (start < currtime < end) and (d.isoweekday() in range(1, 6)):
+                # get the current data and update the graphs
                 updateDailies()
 
             # check if its the refresh time

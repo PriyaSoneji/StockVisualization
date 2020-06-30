@@ -30,6 +30,8 @@ data = DataFrame({'Price': price,
 
 # print(data)
 
+print(pd.DataFrame(r.stocks.get_instruments_by_symbols(symbol))['url'][0])
+
 plt.figure(figsize=(5, 5))
 plt.plot(time, price)
 plt.show()
