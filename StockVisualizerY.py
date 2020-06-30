@@ -1,40 +1,58 @@
+# import packages
 from pandas import DataFrame
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tkinter import *
-from datetime import date
 import datetime
+import yfinance as yf
+from yahoo_fin import *
 from time import sleep
 import time
 import threading
-from yahoo_fin import stock_info as si
-from yahoo_fin.stock_info import *
-import mplcursors
-from win32api import GetSystemMetrics
+import pandas as pd
+import numpy as np
 
+# define the plot style and initialize the tkinter GUI
 plt.style.use('seaborn-darkgrid')
 root = Tk()
 
-e1 = Entry(root).grid(row=0, column=1, sticky='WENS')
-e2 = Entry(root).grid(row=0, column=1, sticky='WENS')
+# define the tickers and arrays to hold the data
+symbol1 = "KSS"
+symbol2 = "NBL"
 
-symbol1 = "VBIV"
-symbol2 = "ALPN"
-symbol3 = "AAPL"
-time1 = []
-price1 = []
-time2 = []
-price2 = []
-time3 = []
-price3 = []
+# initialize the stocks
+stockOne = yf.Ticker(symbol1)
+stockTwo = yf.Ticker(symbol2)
 
+# define the arrays and string variables for the top movers
+dataup = []
+datadown = []
+pctup = []
+pctdown = []
 currPrice1 = StringVar()
 currPrice2 = StringVar()
-Label(root, textvariable=currPrice1, font=("Helvetica", 16)).grid(row=0, column=2, sticky='WENS')
-Label(root, text=symbol1, font=("Helvetica", 16)).grid(row=0, column=1, sticky='WENS')
-Label(root, textvariable=currPrice2, font=("Helvetica", 16)).grid(row=2, column=2, sticky='WENS')
-Label(root, text=symbol2, font=("Helvetica", 16)).grid(row=2, column=1, sticky='WENS')
+gainers = StringVar(value=dataup)
+losers = StringVar(value=datadown)
+gainups = StringVar(value=pctup)
+gaindowns = StringVar(value=pctdown)
 
+# labels for stock data
+Label(root, textvariable=currPrice1, font=("Times", 16)).grid(row=0, column=2, sticky='WENS')
+Label(root, text=symbol1, font=("Times", 16)).grid(row=0, column=1, sticky='WENS')
+Label(root, textvariable=currPrice2, font=("Times", 16)).grid(row=2, column=2, sticky='WENS')
+Label(root, text=symbol2, font=("Times", 16)).grid(row=2, column=1, sticky='WENS')
+
+# labels for gainers and losers
+Label(root, text="Top Gainers", font=("Times", 16), fg="green").grid(row=0, column=3, sticky='WENS')
+Label(root, text="Top Losers", font=("Times", 16), fg="red").grid(row=2, column=3, sticky='WENS')
+Listbox(root, listvariable=gainers, font=("Times", 16), fg="green").grid(row=1, column=3, sticky='WENS')
+Listbox(root, listvariable=losers, font=("Times", 16), fg="red").grid(row=3, column=3, sticky='WENS')
+Label(root, text="% Up", font=("Times", 16), fg="green").grid(row=0, column=4, sticky='WENS')
+Label(root, text="% Down", font=("Times", 16), fg="red").grid(row=2, column=4, sticky='WENS')
+Listbox(root, listvariable=gainups, font=("Times", 16), fg="green").grid(row=1, column=4, sticky='WENS')
+Listbox(root, listvariable=gaindowns, font=("Times", 16), fg="red").grid(row=3, column=4, sticky='WENS')
+
+# initialize the current time
 current_time = 0
 
 # figure one data
@@ -49,7 +67,6 @@ df2 = None
 figure2 = plt.Figure(figsize=(4, 3), dpi=100)
 ax2 = figure2.add_subplot(111)
 canvas2 = FigureCanvasTkAgg(figure2, root)
-mplcursors.cursor(hover=True)
 canvas2.get_tk_widget().grid(row=1, column=2, sticky='WENS')
 
 # figure three data
@@ -64,148 +81,164 @@ df4 = None
 figure4 = plt.Figure(figsize=(4, 3), dpi=100)
 ax4 = figure4.add_subplot(111)
 canvas4 = FigureCanvasTkAgg(figure4, root)
-mplcursors.cursor(hover=True)
 canvas4.get_tk_widget().grid(row=3, column=2, sticky='WENS')
 
-# stop event
+# stop event for threading
 stopEvent = threading.Event()
 
 
+# resets the plots
 def resetDaily():
-    global time1, time2, time3, price1, price2, price3, figure1
+    global figure1, figure3
     figure1.clf()
+    figure3.clf()
     time1 = []
     time2 = []
-    time3 = []
     price1 = []
     price2 = []
-    price3 = []
-    plotgraph2()
-    plotgraph4()
 
 
+# defines what to do on startup to initialize everything
 def startup():
-    global time1, time2, price1, price2, symbol1, symbol2
+    # plot the historical graphs and set up the top movers lists
     plotgraph2()
     plotgraph4()
-    time1.append("09:30:00")
-    time2.append("09:30:00")
-    price1.append(round(si.get_live_price(symbol1), 2))
-    price2.append(round(si.get_live_price(symbol2), 2))
+    # getDayMovers()
 
 
-def isNowInTimePeriod(startTime, endTime, nowTime):
-    if startTime < endTime:
-        return startTime <= nowTime <= endTime
-    else:  # Over midnight
-        return nowTime >= startTime or nowTime <= endTime
-
-
+# updates the daily graphs and label
 def updateDailies():
-    global time1, time2, time3, price1, price2, price3, figure1, symbol1, symbol2, symbol3
-    getCurrPrice(symbol1, time1, price1)
-    getCurrPrice(symbol2, time2, price2)
-    getCurrPrice(symbol3, time3, price3)
-    currPrice1.set("Current Price: $" + str(price1[-1]))
-    currPrice2.set("Current Price: $" + str(price2[-1]))
+    global stockOne, stockTwo
+    # set the current price label to the current price
+    dailyData1 = pd.DataFrame(stockOne.history(period="1d", interval="1m"))['Open']
+    dailyData2 = pd.DataFrame(stockTwo.history(period="1d", interval="1m"))['Open']
+    currPrice1.set("Current Price: $" + (str(round(float(dailyData1[-1]), 2))))
+    currPrice2.set("Current Price: $" + (str(round(float(dailyData2[-1]), 2))))
+
+    # plot the graphs
     plotgraph1()
     plotgraph3()
 
 
+# main loop to handle updating the graph once program starts
 def stonkLoop():
     try:
-        start = '09:30:10'
-        end = '16:30:00'
+        # define the timings
+        start = '09:30:00'
+        end = '16:00:00'
         refreshStart = '09:29:00'
         refreshEnd = '09:29:30'
+
+        # confirm threading stopEvent
         while not stopEvent.is_set():
+            # get current time and date
             t = time.localtime()
             d = datetime.datetime.now()
             currtime = time.strftime("%H:%M:%S", t)
+
+            # check if stock market is open
             if (start < currtime < end) and (d.isoweekday() in range(1, 6)):
+                # get the current data and update the graphs
                 updateDailies()
 
+            # check if its the refresh time
             if refreshStart < currtime < refreshEnd:
                 resetDaily()
 
-            sleep(10)
+            # amount between graph and price updates - in seconds
+            sleep(60)
 
     except RuntimeError:
         print("[INFO] caught a RuntimeError")
 
 
-def getDataMonth(symbol, timearr, pricearr):
-    pricearr.append(
-        get_data(symbol, index_as_date=False, end_date=date.today().strftime("%d/%m/%Y"), start_date='06/01/2020')[
-            'open'])
-    timearr.append(get_data(symbol, end_date=date.today().strftime("%d/%m/%Y"), start_date='06/01/2020').index)
+# get the daily movers
+def getDayMovers():
+    global gainers, losers, dataup, datadown, pctup, pctdown, gainups, gaindowns
+    dataupp = pd.DataFrame(r.markets.get_top_movers("up"))
+    datadownn = pd.DataFrame(r.markets.get_top_movers("down"))
 
+    dataupp['pct'] = dataupp['price_movement'].apply(lambda x: x['market_hours_last_movement_pct'])
+    datadownn['pct'] = datadownn['price_movement'].apply(lambda x: x['market_hours_last_movement_pct'])
 
-def getCurrPrice(symbol, timearr, pricearr):
-    global current_time
-    pricearr.append(round(si.get_live_price(symbol), 2))
-    current_time = datetime.datetime.now().strftime('%H:%M:%S')
-    timearr.append(current_time)
+    pctup = dataupp['pct']
+    pctdown = datadownn['pct']
+
+    dataupp.index = pd.DataFrame(r.markets.get_top_movers("up"))['symbol']
+    datadownn.index = pd.DataFrame(r.markets.get_top_movers("down"))['symbol']
+
+    datadownn.to_numpy()
+    dataupp.to_numpy()
+    datadown = datadownn.index
+    dataup = dataupp.index
+
+    # sets the list box data
+    gainers.set('\n'.join(dataup))
+    losers.set('\n'.join(datadown))
+    gainups.set('\n'.join(pctup))
+    gaindowns.set('\n'.join(pctdown))
 
 
 # stonk one - current price
 def plotgraph1():
-    # grab a reference to the image panels
-    global df1, figure1, ax1, root, price1, time1
+    global df1, figure1, ax1, root
+    dailyData = pd.DataFrame(stockOne.history(period="1d", interval="1m"))['Open']
+    dailyData.index = dailyData.index.strftime("%H:%M:%S")
     # data for the plot
-    df1 = DataFrame({'Price': price1,
-                     'Time': time1})
-    df1.plot(kind='line', legend=False, ax=ax1, grid=True, x='Time', y='Price', title="Stonks One")
+    df1 = dailyData
+    df1.plot(kind='line', legend=False, ax=ax1, grid=True, x=df1.index, y=df1, title="Current Trend")
+    figure1.autofmt_xdate()
     canvas1.draw_idle()
 
 
 # stonk one - one month price graph
 def plotgraph2():
-    # grab a reference to the image panels
-    global df2, figure2, ax2, root, symbol1
+    global df2, figure2, ax2, root
+    monthlyData = pd.DataFrame(stockOne.history(period="1mo", interval="1d"))['Open']
+    monthlyData.index = monthlyData.index.strftime("%m/%d")
     # data for the plot
-    df2 = DataFrame(
-        {'Time': get_data(symbol1, end_date=date.today().strftime("%d/%m/%Y"), start_date='05/01/2020').index,
-         'Price': (
-             get_data(symbol1, index_as_date=False, end_date=date.today().strftime("%d/%m/%Y"),
-                      start_date='05/01/2020')[
-                 'open'])})
-    df2.plot(kind='line', legend=False, ax=ax2, grid=True, x='Time', y='Price', title="One Month Trend")
+    df2 = monthlyData
+    df2.plot(kind='line', legend=False, ax=ax2, grid=True, x=df2.index, y=df2, title="One Month Trend")
+    figure2.autofmt_xdate()
     canvas2.draw_idle()
 
 
 # stonk two - current price
 def plotgraph3():
-    # grab a reference to the image panels
-    global df3, figure3, ax3, root, price2, time2
+    global df3, figure3, ax3, root
+    dailyData = pd.DataFrame(stockTwo.history(period="1d", interval="1m"))['Open']
+    dailyData.index = dailyData.index.strftime("%H:%M:%S")
     # data for the plot
-    df3 = DataFrame({'Price': price2,
-                     'Time': time2})
-    df3.plot(kind='line', legend=False, ax=ax3, grid=True, x='Time', y='Price', title="Stonks Two")
+    df3 = dailyData
+    df3.plot(kind='line', legend=False, ax=ax3, grid=True, x=df3.index, y=df3, title="Current Trend")
+    figure3.autofmt_xdate()
     canvas3.draw_idle()
 
 
 # stonk two - one month price graph
 def plotgraph4():
-    # grab a reference to the image panels
-    global df4, figure4, ax4, root, symbol2
+    global df4, figure4, ax4, root
     # data for the plot
-    df4 = DataFrame(
-        {'Time': get_data(symbol2, end_date=date.today().strftime("%d/%m/%Y"), start_date='05/01/2020').index,
-         'Price': (
-             get_data(symbol2, index_as_date=False, end_date=date.today().strftime("%d/%m/%Y"),
-                      start_date='05/01/2020')[
-                 'open'])})
-    df4.plot(kind='line', legend=False, ax=ax4, grid=True, x='Time', y='Price', title="One Month Trend")
+    monthlyData = pd.DataFrame(stockTwo.history(period="1mo", interval="1d"))['Open']
+    monthlyData.index = monthlyData.index.strftime("%m/%d")
+    # data for the plot
+    df4 = monthlyData
+    df4.plot(kind='line', legend=False, ax=ax4, grid=True, x=df4.index, y=df4, title="One Month Trend")
+    figure4.autofmt_xdate()
     canvas4.draw_idle()
 
 
+# turn on interactive mode for plots
 plt.ion()
 
+# set GUI title
 root.wm_title("StonksTracker")
-root.geometry(str(GetSystemMetrics(0)) + "x" + str(GetSystemMetrics(1)))
 
 startup()
+
+# start the threading
 thread = threading.Thread(target=stonkLoop, args=())
 thread.start()
+
+# start GUI mainloop
 root.mainloop()
