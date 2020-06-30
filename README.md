@@ -14,4 +14,4 @@ Used to test certain functionality of StonkVisualizer.
 ## Setup
 * pip install -r requirements.txt
 * you can use a virtual evironment if you wish
-* for the RobinHood programs, you need environment variables with your username and password
+* for the RobinHood programs, you need environment variables with your username and password (RobinUSR and RobinPWD)
