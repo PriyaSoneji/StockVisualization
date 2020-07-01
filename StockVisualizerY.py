@@ -5,7 +5,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tkinter import *
 import datetime
 import yfinance as yf
-from yahoo_fin import *
+from yahoo_fin import stock_info as si
 from time import sleep
 import time
 import threading
@@ -25,16 +25,11 @@ stockOne = yf.Ticker(symbol1)
 stockTwo = yf.Ticker(symbol2)
 
 # define the arrays and string variables for the top movers
-dataup = []
-datadown = []
-pctup = []
-pctdown = []
 currPrice1 = StringVar()
 currPrice2 = StringVar()
-gainers = StringVar(value=dataup)
-losers = StringVar(value=datadown)
-gainups = StringVar(value=pctup)
-gaindowns = StringVar(value=pctdown)
+gainers = StringVar()
+losers = StringVar()
+activity = StringVar()
 
 # labels for stock data
 Label(root, textvariable=currPrice1, font=("Times", 16)).grid(row=0, column=2, sticky='WENS')
@@ -44,13 +39,11 @@ Label(root, text=symbol2, font=("Times", 16)).grid(row=2, column=1, sticky='WENS
 
 # labels for gainers and losers
 Label(root, text="Top Gainers", font=("Times", 16), fg="green").grid(row=0, column=3, sticky='WENS')
-Label(root, text="Top Losers", font=("Times", 16), fg="red").grid(row=2, column=3, sticky='WENS')
-Listbox(root, listvariable=gainers, font=("Times", 16), fg="green").grid(row=1, column=3, sticky='WENS')
-Listbox(root, listvariable=losers, font=("Times", 16), fg="red").grid(row=3, column=3, sticky='WENS')
-Label(root, text="% Up", font=("Times", 16), fg="green").grid(row=0, column=4, sticky='WENS')
-Label(root, text="% Down", font=("Times", 16), fg="red").grid(row=2, column=4, sticky='WENS')
-Listbox(root, listvariable=gainups, font=("Times", 16), fg="green").grid(row=1, column=4, sticky='WENS')
-Listbox(root, listvariable=gaindowns, font=("Times", 16), fg="red").grid(row=3, column=4, sticky='WENS')
+Listbox(root, listvariable=gainers, font=("Times", 12), fg="green", width=30).grid(row=1, column=3, sticky='WENS')
+Label(root, text="Top Active", font=("Times", 16), fg="blue").grid(row=2, column=3, sticky='WENS')
+Listbox(root, listvariable=activity, font=("Times", 12), fg="blue", width=30).grid(row=3, column=3, sticky='WENS')
+Label(root, text="Top Losers", font=("Times", 16), fg="red").grid(row=0, column=4, sticky='WENS')
+Listbox(root, listvariable=losers, font=("Times", 12), fg="red", width=30).grid(row=1, column=4, sticky='WENS')
 
 # initialize the current time
 current_time = 0
@@ -101,9 +94,11 @@ def resetDaily():
 # defines what to do on startup to initialize everything
 def startup():
     # plot the historical graphs and set up the top movers lists
+    plotgraph1()
+    plotgraph3()
+    getDayMovers()
     plotgraph2()
     plotgraph4()
-    # getDayMovers()
 
 
 # updates the daily graphs and label
@@ -118,6 +113,7 @@ def updateDailies():
     # plot the graphs
     plotgraph1()
     plotgraph3()
+    getDayMovers()
 
 
 # main loop to handle updating the graph once program starts
@@ -146,7 +142,7 @@ def stonkLoop():
                 resetDaily()
 
             # amount between graph and price updates - in seconds
-            sleep(60)
+            sleep(30)
 
     except RuntimeError:
         print("[INFO] caught a RuntimeError")
@@ -154,29 +150,35 @@ def stonkLoop():
 
 # get the daily movers
 def getDayMovers():
-    global gainers, losers, dataup, datadown, pctup, pctdown, gainups, gaindowns
-    dataupp = pd.DataFrame(r.markets.get_top_movers("up"))
-    datadownn = pd.DataFrame(r.markets.get_top_movers("down"))
+    global gainers, losers, activity
+    gainerdata = pd.DataFrame(si.get_day_gainers())[['Symbol', 'Price (Intraday)', '% Change']]
+    gainerdata['Price (Intraday)'] = "$" + gainerdata['Price (Intraday)'].astype(str)
+    gainerdata['% Change'] = "+" + gainerdata['% Change'].astype(str) + "%"
+    gainerdata['Combined'] = gainerdata[gainerdata.columns[0:]].apply(
+        lambda x: ':'.join(x.dropna().astype(str)),
+        axis=1
+    )
 
-    dataupp['pct'] = dataupp['price_movement'].apply(lambda x: x['market_hours_last_movement_pct'])
-    datadownn['pct'] = datadownn['price_movement'].apply(lambda x: x['market_hours_last_movement_pct'])
+    loserdata = pd.DataFrame(si.get_day_losers())[['Symbol', 'Price (Intraday)', '% Change']]
+    loserdata['Price (Intraday)'] = "$" + loserdata['Price (Intraday)'].astype(str)
+    loserdata['% Change'] = loserdata['% Change'].astype(str) + "%"
+    loserdata['Combined'] = loserdata[loserdata.columns[0:]].apply(
+        lambda x: ':'.join(x.dropna().astype(str)),
+        axis=1
+    )
 
-    pctup = dataupp['pct']
-    pctdown = datadownn['pct']
-
-    dataupp.index = pd.DataFrame(r.markets.get_top_movers("up"))['symbol']
-    datadownn.index = pd.DataFrame(r.markets.get_top_movers("down"))['symbol']
-
-    datadownn.to_numpy()
-    dataupp.to_numpy()
-    datadown = datadownn.index
-    dataup = dataupp.index
+    activedata = pd.DataFrame(si.get_day_most_active())[['Symbol', 'Price (Intraday)', '% Change']]
+    activedata['Price (Intraday)'] = "$" + activedata['Price (Intraday)'].astype(str)
+    activedata['% Change'] = activedata['% Change'].astype(str) + "%"
+    activedata['Combined'] = activedata[activedata.columns[0:]].apply(
+        lambda x: ':'.join(x.dropna().astype(str)),
+        axis=1
+    )
 
     # sets the list box data
-    gainers.set('\n'.join(dataup))
-    losers.set('\n'.join(datadown))
-    gainups.set('\n'.join(pctup))
-    gaindowns.set('\n'.join(pctdown))
+    gainers.set('\n'.join(gainerdata['Combined']))
+    losers.set('\n'.join(loserdata['Combined']))
+    activity.set('\n'.join(activedata['Combined']))
 
 
 # stonk one - current price
