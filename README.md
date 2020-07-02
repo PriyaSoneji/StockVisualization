@@ -7,9 +7,10 @@ Plots live data and historical data. Displays daily movers and current price as 
 Requires a RobinHood Account.
 Used to test certain functionality of StockVisualizerRobin.
 ### StockVisualizerY
-Still in Progress. Uses the yfinance package.
+Has the most functionality. Uses the yfinance and yahoo_fin packages. Allows to track historical and current stock data.
+Displays Gainers, Losers, and Most Active Stocks. Can double click to view the stock in second stock area.
 ### Tester
-Used to test certain functionality of StonkVisualizer.
+Used to test certain functionality of StockkVisualizer.
 
 ## Setup
 * pip install -r requirements.txt
