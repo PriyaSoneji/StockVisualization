@@ -17,8 +17,11 @@ plt.style.use('seaborn-darkgrid')
 root = Tk()
 
 # define the tickers and arrays to hold the data
-symbol1 = "KSS"
-symbol2 = "NBL"
+symbol1 = "POLA"
+symbol2 = "CYDY"
+gainerdata = []
+loserdata = []
+activedata = []
 
 # initialize the stocks
 stockOne = yf.Ticker(symbol1)
@@ -30,20 +33,66 @@ currPrice2 = StringVar()
 gainers = StringVar()
 losers = StringVar()
 activity = StringVar()
+symbol = StringVar()
+symbol.set(symbol2)
 
 # labels for stock data
 Label(root, textvariable=currPrice1, font=("Times", 16)).grid(row=0, column=2, sticky='WENS')
 Label(root, text=symbol1, font=("Times", 16)).grid(row=0, column=1, sticky='WENS')
 Label(root, textvariable=currPrice2, font=("Times", 16)).grid(row=2, column=2, sticky='WENS')
-Label(root, text=symbol2, font=("Times", 16)).grid(row=2, column=1, sticky='WENS')
+Label(root, textvariable=symbol, font=("Times", 16)).grid(row=2, column=1, sticky='WENS')
+
+
+def onselectGainer(evt):
+    global symbol2, gainerdata, stockTwo, canvas3
+    # Note here that Tkinter passes an event object to onselect()
+    w = evt.widget
+    index = int(w.curselection()[0])
+    symbol2 = gainerdata['Symbol'][index]
+    symbol.set(symbol2)
+    stockTwo = yf.Ticker(symbol2)
+    updateDailies()
+    plotgraph4()
+
+
+def onselectLoser(evt):
+    global symbol2, loserdata, stockTwo
+    # Note here that Tkinter passes an event object to onselect()
+    w = evt.widget
+    index = int(w.curselection()[0])
+    symbol2 = loserdata['Symbol'][index]
+    symbol.set(symbol2)
+    stockTwo = yf.Ticker(symbol2)
+    updateDailies()
+    plotgraph4()
+
+
+def onselectActive(evt):
+    global symbol2, activedata, stockTwo
+    # Note here that Tkinter passes an event object to onselect()
+    w = evt.widget
+    index = int(w.curselection()[0])
+    symbol2 = activedata['Symbol'][index]
+    symbol.set(symbol2)
+    stockTwo = yf.Ticker(symbol2)
+    updateDailies()
+    plotgraph4()
+
 
 # labels for gainers and losers
 Label(root, text="Top Gainers", font=("Times", 16), fg="green").grid(row=0, column=3, sticky='WENS')
-Listbox(root, listvariable=gainers, font=("Times", 12), fg="green", width=30).grid(row=1, column=3, sticky='WENS')
+gainerbox = Listbox(root, listvariable=gainers, font=("Times", 12), fg="green", width=30, selectmode=SINGLE)
+gainerbox.grid(row=1, column=3, sticky='WENS')
 Label(root, text="Top Active", font=("Times", 16), fg="blue").grid(row=2, column=3, sticky='WENS')
-Listbox(root, listvariable=activity, font=("Times", 12), fg="blue", width=30).grid(row=3, column=3, sticky='WENS')
+activitybox = Listbox(root, listvariable=activity, font=("Times", 12), fg="blue", width=30, selectmode=SINGLE)
+activitybox.grid(row=3, column=3, sticky='WENS')
 Label(root, text="Top Losers", font=("Times", 16), fg="red").grid(row=0, column=4, sticky='WENS')
-Listbox(root, listvariable=losers, font=("Times", 12), fg="red", width=30).grid(row=1, column=4, sticky='WENS')
+loserbox = Listbox(root, listvariable=losers, font=("Times", 12), fg="red", width=30, selectmode=SINGLE)
+loserbox.grid(row=1, column=4, sticky='WENS')
+
+gainerbox.bind("<Double-Button-1>", onselectGainer)
+loserbox.bind("<Double-Button-1>", onselectLoser)
+activitybox.bind("<Double-Button-1>", onselectActive)
 
 # initialize the current time
 current_time = 0
@@ -80,17 +129,6 @@ canvas4.get_tk_widget().grid(row=3, column=2, sticky='WENS')
 stopEvent = threading.Event()
 
 
-# resets the plots
-def resetDaily():
-    global figure1, figure3
-    figure1.clf()
-    figure3.clf()
-    time1 = []
-    time2 = []
-    price1 = []
-    price2 = []
-
-
 # defines what to do on startup to initialize everything
 def startup():
     # plot the historical graphs and set up the top movers lists
@@ -103,12 +141,10 @@ def startup():
 
 # updates the daily graphs and label
 def updateDailies():
-    global stockOne, stockTwo
+    global stockOne, stockTwo, loserbox, gainerbox, activitybox
     # set the current price label to the current price
-    dailyData1 = pd.DataFrame(stockOne.history(period="1d", interval="1m"))['Open']
-    dailyData2 = pd.DataFrame(stockTwo.history(period="1d", interval="1m"))['Open']
-    currPrice1.set("Current Price: $" + (str(round(float(dailyData1[-1]), 2))))
-    currPrice2.set("Current Price: $" + (str(round(float(dailyData2[-1]), 2))))
+    currPrice1.set("Current Price: $" + (str(round(float(si.get_live_price(symbol1)), 2))))
+    currPrice2.set("Current Price: $" + (str(round(float(si.get_live_price(symbol2)), 2))))
 
     # plot the graphs
     plotgraph1()
@@ -122,8 +158,6 @@ def stonkLoop():
         # define the timings
         start = '09:30:00'
         end = '16:00:00'
-        refreshStart = '09:29:00'
-        refreshEnd = '09:29:30'
 
         # confirm threading stopEvent
         while not stopEvent.is_set():
@@ -137,10 +171,6 @@ def stonkLoop():
                 # get the current data and update the graphs
                 updateDailies()
 
-            # check if its the refresh time
-            if refreshStart < currtime < refreshEnd:
-                resetDaily()
-
             # amount between graph and price updates - in seconds
             sleep(30)
 
@@ -150,7 +180,7 @@ def stonkLoop():
 
 # get the daily movers
 def getDayMovers():
-    global gainers, losers, activity
+    global gainers, losers, activity, gainerdata, loserdata, activedata
     gainerdata = pd.DataFrame(si.get_day_gainers())[['Symbol', 'Price (Intraday)', '% Change']]
     gainerdata['Price (Intraday)'] = "$" + gainerdata['Price (Intraday)'].astype(str)
     gainerdata['% Change'] = "+" + gainerdata['% Change'].astype(str) + "%"
@@ -183,10 +213,12 @@ def getDayMovers():
 
 # stonk one - current price
 def plotgraph1():
-    global df1, figure1, ax1, root
+    global df1, figure1, ax1, root, canvas1
     dailyData = pd.DataFrame(stockOne.history(period="1d", interval="1m"))['Open']
     dailyData.index = dailyData.index.strftime("%H:%M:%S")
+    ax1.clear()
     # data for the plot
+    df1 = None
     df1 = dailyData
     df1.plot(kind='line', legend=False, ax=ax1, grid=True, x=df1.index, y=df1, title="Current Trend")
     figure1.autofmt_xdate()
@@ -195,10 +227,12 @@ def plotgraph1():
 
 # stonk one - one month price graph
 def plotgraph2():
-    global df2, figure2, ax2, root
+    global df2, figure2, ax2, root, canvas2
     monthlyData = pd.DataFrame(stockOne.history(period="1mo", interval="1d"))['Open']
     monthlyData.index = monthlyData.index.strftime("%m/%d")
+    ax2.clear()
     # data for the plot
+    df2 = None
     df2 = monthlyData
     df2.plot(kind='line', legend=False, ax=ax2, grid=True, x=df2.index, y=df2, title="One Month Trend")
     figure2.autofmt_xdate()
@@ -207,10 +241,12 @@ def plotgraph2():
 
 # stonk two - current price
 def plotgraph3():
-    global df3, figure3, ax3, root
+    global df3, figure3, ax3, root, canvas3
     dailyData = pd.DataFrame(stockTwo.history(period="1d", interval="1m"))['Open']
     dailyData.index = dailyData.index.strftime("%H:%M:%S")
+    ax3.clear()
     # data for the plot
+    df3 = None
     df3 = dailyData
     df3.plot(kind='line', legend=False, ax=ax3, grid=True, x=df3.index, y=df3, title="Current Trend")
     figure3.autofmt_xdate()
@@ -219,11 +255,13 @@ def plotgraph3():
 
 # stonk two - one month price graph
 def plotgraph4():
-    global df4, figure4, ax4, root
+    global df4, figure4, ax4, root, canvas4
     # data for the plot
     monthlyData = pd.DataFrame(stockTwo.history(period="1mo", interval="1d"))['Open']
     monthlyData.index = monthlyData.index.strftime("%m/%d")
+    ax4.clear()
     # data for the plot
+    df4 = None
     df4 = monthlyData
     df4.plot(kind='line', legend=False, ax=ax4, grid=True, x=df4.index, y=df4, title="One Month Trend")
     figure4.autofmt_xdate()
@@ -231,7 +269,7 @@ def plotgraph4():
 
 
 # turn on interactive mode for plots
-plt.ion()
+plt.show()
 
 # set GUI title
 root.wm_title("StonksTracker")

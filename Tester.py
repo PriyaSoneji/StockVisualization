@@ -21,6 +21,4 @@ losers.index = pd.DataFrame(si.get_day_losers())['Symbol']
 active = pd.DataFrame(si.get_day_most_active())[['Price (Intraday)', '% Change']]
 active.index = pd.DataFrame(si.get_day_most_active())['Symbol']
 
-print(gainers.head())
-print(losers.head())
-print(active.head())
+print(pd.DataFrame(si.tickers_dow()))
