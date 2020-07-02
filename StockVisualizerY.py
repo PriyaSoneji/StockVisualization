@@ -27,7 +27,7 @@ activedata = []
 stockOne = yf.Ticker(symbol1)
 stockTwo = yf.Ticker(symbol2)
 
-# define the arrays and string variables for the top movers
+# define the string variables for the labels
 currPrice1 = StringVar()
 currPrice2 = StringVar()
 gainers = StringVar()
@@ -43,6 +43,7 @@ Label(root, textvariable=currPrice2, font=("Times", 16)).grid(row=2, column=2, s
 Label(root, textvariable=symbol, font=("Times", 16)).grid(row=2, column=1, sticky='WENS')
 
 
+# these three functions define what to do when an index is selected on one of the list boxes
 def onselectGainer(evt):
     global symbol2, gainerdata, stockTwo, canvas3
     # Note here that Tkinter passes an event object to onselect()
@@ -90,6 +91,7 @@ Label(root, text="Top Losers", font=("Times", 16), fg="red").grid(row=0, column=
 loserbox = Listbox(root, listvariable=losers, font=("Times", 12), fg="red", width=30, selectmode=SINGLE)
 loserbox.grid(row=1, column=4, sticky='WENS')
 
+# defines what function to call when something is double clicked
 gainerbox.bind("<Double-Button-1>", onselectGainer)
 loserbox.bind("<Double-Button-1>", onselectLoser)
 activitybox.bind("<Double-Button-1>", onselectActive)
@@ -149,7 +151,6 @@ def updateDailies():
     # plot the graphs
     plotgraph1()
     plotgraph3()
-    getDayMovers()
 
 
 # main loop to handle updating the graph once program starts
@@ -170,6 +171,7 @@ def stonkLoop():
             if (start < currtime < end) and (d.isoweekday() in range(1, 6)):
                 # get the current data and update the graphs
                 updateDailies()
+                getDayMovers()
 
             # amount between graph and price updates - in seconds
             sleep(30)
@@ -178,7 +180,7 @@ def stonkLoop():
         print("[INFO] caught a RuntimeError")
 
 
-# get the daily movers
+# get the daily gainers, losers, and active stocks
 def getDayMovers():
     global gainers, losers, activity, gainerdata, loserdata, activedata
     gainerdata = pd.DataFrame(si.get_day_gainers())[['Symbol', 'Price (Intraday)', '% Change']]
@@ -214,61 +216,72 @@ def getDayMovers():
 # stonk one - current price
 def plotgraph1():
     global df1, figure1, ax1, root, canvas1
+    # define the daily data
     dailyData = pd.DataFrame(stockOne.history(period="1d", interval="1m"))['Open']
     dailyData.index = dailyData.index.strftime("%H:%M:%S")
+    # clear the axis and dataframe so there's no overwriting
     ax1.clear()
-    # data for the plot
     df1 = None
+    # data for the plot
     df1 = dailyData
     df1.plot(kind='line', legend=False, ax=ax1, grid=True, x=df1.index, y=df1, title="Current Trend")
     figure1.autofmt_xdate()
+    # draw the plot
     canvas1.draw_idle()
 
 
 # stonk one - one month price graph
 def plotgraph2():
     global df2, figure2, ax2, root, canvas2
+    # define the daily data
     monthlyData = pd.DataFrame(stockOne.history(period="1mo", interval="1d"))['Open']
     monthlyData.index = monthlyData.index.strftime("%m/%d")
+    # clear the axis and dataframe so there's no overwriting
     ax2.clear()
-    # data for the plot
     df2 = None
+    # data for the plot
     df2 = monthlyData
     df2.plot(kind='line', legend=False, ax=ax2, grid=True, x=df2.index, y=df2, title="One Month Trend")
     figure2.autofmt_xdate()
+    # draw the plot
     canvas2.draw_idle()
 
 
 # stonk two - current price
 def plotgraph3():
     global df3, figure3, ax3, root, canvas3
+    # define the daily data
     dailyData = pd.DataFrame(stockTwo.history(period="1d", interval="1m"))['Open']
     dailyData.index = dailyData.index.strftime("%H:%M:%S")
+    # clear the axis and dataframe so there's no overwriting
     ax3.clear()
-    # data for the plot
     df3 = None
+    # data for the plot
     df3 = dailyData
     df3.plot(kind='line', legend=False, ax=ax3, grid=True, x=df3.index, y=df3, title="Current Trend")
     figure3.autofmt_xdate()
+    # draw the plot
     canvas3.draw_idle()
 
 
 # stonk two - one month price graph
 def plotgraph4():
     global df4, figure4, ax4, root, canvas4
-    # data for the plot
+    # define the daily data
     monthlyData = pd.DataFrame(stockTwo.history(period="1mo", interval="1d"))['Open']
     monthlyData.index = monthlyData.index.strftime("%m/%d")
+    # clear the axis and dataframe so there's no overwriting
     ax4.clear()
-    # data for the plot
     df4 = None
+    # data for the plot
     df4 = monthlyData
     df4.plot(kind='line', legend=False, ax=ax4, grid=True, x=df4.index, y=df4, title="One Month Trend")
     figure4.autofmt_xdate()
+    # draw the plot
     canvas4.draw_idle()
 
 
-# turn on interactive mode for plots
+# show the plots
 plt.show()
 
 # set GUI title
