@@ -17,14 +17,14 @@ plt.style.use('seaborn-darkgrid')
 root = Tk()
 
 # define the tickers and arrays to hold the data
-symbol1 = "POLA"
-symbol2 = "CYDY"
+symbollist = ["MSFT", "AAPL", "TSLA"]
+symbol2 = "MSFT"
 gainerdata = []
 loserdata = []
 activedata = []
 
 # initialize the stocks
-stockOne = yf.Ticker(symbol1)
+stockOne = yf.Ticker(symbollist[0])
 stockTwo = yf.Ticker(symbol2)
 
 # define the string variables for the labels
@@ -34,13 +34,17 @@ gainers = StringVar()
 losers = StringVar()
 activity = StringVar()
 symbol = StringVar()
-symbol.set(symbol2)
+symbol.set(symbollist[0])
+symbol1 = StringVar()
+symbol1.set(symbol2)
 
 # labels for stock data
 Label(root, textvariable=currPrice1, font=("Times", 16)).grid(row=0, column=2, sticky='WENS')
-Label(root, text=symbol1, font=("Times", 16)).grid(row=0, column=1, sticky='WENS')
+Label(root, textvariable=symbol, font=("Times", 16)).grid(row=0, column=1, sticky='WENS')
 Label(root, textvariable=currPrice2, font=("Times", 16)).grid(row=2, column=2, sticky='WENS')
-Label(root, textvariable=symbol, font=("Times", 16)).grid(row=2, column=1, sticky='WENS')
+Label(root, textvariable=symbol1, font=("Times", 16)).grid(row=2, column=1, sticky='WENS')
+
+count = 0
 
 
 # these three functions define what to do when an index is selected on one of the list boxes
@@ -50,7 +54,7 @@ def onselectGainer(evt):
     w = evt.widget
     index = int(w.curselection()[0])
     symbol2 = gainerdata['Symbol'][index]
-    symbol.set(symbol2)
+    symbol1.set(symbol2)
     stockTwo = yf.Ticker(symbol2)
     updateDailies()
     plotgraph4()
@@ -62,7 +66,7 @@ def onselectLoser(evt):
     w = evt.widget
     index = int(w.curselection()[0])
     symbol2 = loserdata['Symbol'][index]
-    symbol.set(symbol2)
+    symbol1.set(symbol2)
     stockTwo = yf.Ticker(symbol2)
     updateDailies()
     plotgraph4()
@@ -74,7 +78,7 @@ def onselectActive(evt):
     w = evt.widget
     index = int(w.curselection()[0])
     symbol2 = activedata['Symbol'][index]
-    symbol.set(symbol2)
+    symbol1.set(symbol2)
     stockTwo = yf.Ticker(symbol2)
     updateDailies()
     plotgraph4()
@@ -156,7 +160,7 @@ def updateDailies():
 # main loop to handle updating the graph once program starts
 def stonkLoop():
     try:
-        # define the timings
+        # define the timings of stock market hours (EST)
         start = '09:30:00'
         end = '16:00:00'
 
@@ -175,6 +179,40 @@ def stonkLoop():
 
             # amount between graph and price updates - in seconds
             sleep(30)
+
+    except RuntimeError:
+        print("[INFO] caught a RuntimeError")
+
+
+# rotate through list of tickers every 15 seconds
+def rotateTickers():
+    global symbol1, symbollist, stockOne, count
+    try:
+        # define the timings of stock market hours (EST)
+        start = '08:30:00'
+        end = '16:00:00'
+
+        # confirm threading stopEvent
+        while not stopEvent.is_set():
+            # get current time and date
+            t = time.localtime()
+            d = datetime.datetime.now()
+            currtime = time.strftime("%H:%M:%S", t)
+
+            # check if stock market is open
+            if (start < currtime < end) and (d.isoweekday() in range(1, 6)):
+                # get the current data and update the graphs
+                symbol1 = symbollist[count]
+                symbol.set(symbol1)
+                stockOne = yf.Ticker(symbol1)
+                updateDailies()
+                plotgraph2()
+                count = count + 1
+                if count > (len(symbollist) - 1):
+                    count = 0
+
+            # amount between graph and price updates - in seconds
+            sleep(15)
 
     except RuntimeError:
         print("[INFO] caught a RuntimeError")
@@ -292,6 +330,8 @@ startup()
 # start the threading
 thread = threading.Thread(target=stonkLoop, args=())
 thread.start()
+thread1 = threading.Thread(target=rotateTickers, args=())
+thread1.start()
 
 # start GUI mainloop
 root.mainloop()
