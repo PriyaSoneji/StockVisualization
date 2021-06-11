@@ -36,7 +36,7 @@ soupsieve==2.0.1
 tqdm==4.46.1
 urllib3==1.25.9
 w3lib==1.22.0
-websockets==8.1
+websockets==9.1
 yahoo-fin==0.8.5
 yahoo-finance==1.4.0
 yahoofinancials==1.5
