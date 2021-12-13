@@ -10,7 +10,7 @@ finance==0.2502
 idna==2.9
 iexfinance==0.4.3
 kiwisolver==1.2.0
-lxml==4.5.1
+lxml==4.6.5
 matplotlib==3.2.2
 mplcursors==0.3
 multitasking==0.0.9
